@@ -1,0 +1,282 @@
+vi /etc/sysconfig/network-scripts/ifcfg-ens160
+[root@localhost admins]# ls /run/media/admins/CentOS-Stream-8-x86_64-dvd/
+AppStream  BaseOS  EFI  images  isolinux  LICENSE  media.repo  TRANS.TBL
+[root@localhost admins]# cat /etc/yum.repos.d/CentOS-Stream-BaseOS.repo > /etc/yum.repos.d/local.repo
+[root@localhost admins]# cat /etc/yum.repos.d/CentOS-Stream-AppStream.repo >> /etc/yum.repos.d/local.repo
+[root@localhost admins]# vi /etc/yum.repos.d/local.repo 
+[root@localhost admins]# dnf repolist 
+repo id                           repo name
+appstream                         CentOS Stream 8 - AppStream
+baseos                            CentOS Stream 8 - BaseOS
+extras                            CentOS Stream 8 - Extras
+local-appstream                   CentOS Stream 8 - AppStream
+local-baseos                      CentOS Stream 8 - BaseOS
+[root@localhost admins]# vi /etc/yum.repos.d/CentOS-Stream-BaseOS.repo 
+[root@localhost admins]# vi /etc/yum.repos.d/CentOS-Stream-AppStream.repo 
+[root@localhost admins]# vi /etc/yum.repos.d/CentOS-Stream-Extras.repo 
+[root@localhost admins]# dnf repolist 
+repo id                           repo name
+local-appstream                   CentOS Stream 8 - AppStream
+local-baseos                      CentOS Stream 8 - BaseOS
+[root@localhost admins]# dnf clean all 
+0 files removed
+[root@localhost admins]# 
+[root@localhost admins]# dnf install vsftpd
+CentOS Stream 8 - BaseOS                        153 MB/s | 2.6 MB     00:00    
+CentOS Stream 8 - AppStream                     179 MB/s | 7.6 MB     00:00    
+Last metadata expiration check: 0:00:01 ago on Thu 12 Sep 2024 07:36:48 AM EDT.
+Dependencies resolved.
+================================================================================
+ Package       Architecture  Version               Repository              Size
+================================================================================
+Installing:
+ vsftpd        x86_64        3.0.3-34.el8          local-appstream        181 k
+
+Transaction Summary
+================================================================================
+Install  1 Package
+
+Total size: 181 k
+Installed size: 347 k
+Is this ok [y/N]: y
+Downloading Packages:
+CentOS Stream 8 - AppStream                     1.6 MB/s | 1.6 kB     00:00    
+Importing GPG key 0x8483C65D:
+ Userid     : "CentOS (CentOS Official Signing Key) <security@centos.org>"
+ Fingerprint: 99DB 70FA E1D7 CE22 7FB6 4882 05B5 55B3 8483 C65D
+ From       : /etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial
+Is this ok [y/N]: y
+Key imported successfully
+Running transaction check
+Transaction check succeeded.
+Running transaction test
+Transaction test succeeded.
+Running transaction
+  Preparing        :                                                        1/1 
+  Installing       : vsftpd-3.0.3-34.el8.x86_64                             1/1 
+  Running scriptlet: vsftpd-3.0.3-34.el8.x86_64                             1/1 
+  Verifying        : vsftpd-3.0.3-34.el8.x86_64                             1/1 
+
+Installed:
+  vsftpd-3.0.3-34.el8.x86_64                                                    
+
+Complete!
+[root@localhost admins]# systemctl start vsftpd
+[root@localhost admins]# systemctl enable vsftpd
+Created symlink /etc/systemd/system/multi-user.target.wants/vsftpd.service → /usr/lib/systemd/system/vsftpd.service.
+[root@localhost admins]# vim /etc/vsftpd/vsftpd.conf
+-----------------------------------------------------------
+local_enable=YES
+write_enable=YES
+anonymous_enable=NO
+chroot_local_user=YES
+
+----------------------------------------------------------- 
+[root@localhost admins]#  systemctl restart vsftpd
+[root@localhost admins]# sudo firewall-cmd --permanent --add-service=ftp
+success
+[root@localhost admins]# sudo firewall-cmd --permanent --add-service=ftp --zone=public
+Warning: ALREADY_ENABLED: ftp
+success
+[root@localhost admins]# sudo firewall-cmd --reload
+success
+[root@localhost admins]# sudo adduser ftpuser
+[root@localhost admins]# sudo passwd ftpuser
+Changing password for user ftpuser.
+New password: 
+Retype new password: 
+passwd: all authentication tokens updated successfully.
+[root@localhost admins]# sudo mkdir -p /var/ftp/ftpuser
+[root@localhost admins]# sudo chown ftpuser:ftpuser /var/ftp/ftpuser
+[root@localhost admins]# sudo chmod 750 /var/ftp/ftpuser
+[root@localhost admins]# firewall-cmd --add-port=22/tcp --permanent
+==================================================================================
+[root@localhost admins]# 
+[root@localhost admins]# dnf install bind bind-utils
+Last metadata expiration check: 0:09:31 ago on Thu 12 Sep 2024 07:36:48 AM EDT.
+Package bind-utils-32:9.11.26-6.el8.x86_64 is already installed.
+Dependencies resolved.
+================================================================================
+ Package     Architecture  Version                 Repository              Size
+================================================================================
+Installing:
+ bind        x86_64        32:9.11.26-6.el8        local-appstream        2.1 M
+
+Transaction Summary
+================================================================================
+Install  1 Package
+
+Total size: 2.1 M
+Installed size: 4.5 M
+Is this ok [y/N]: y
+Downloading Packages:
+Running transaction check
+Transaction check succeeded.
+Running transaction test
+Transaction test succeeded.
+Running transaction
+  Preparing        :                                                        1/1 
+  Running scriptlet: bind-32:9.11.26-6.el8.x86_64                           1/1 
+  Installing       : bind-32:9.11.26-6.el8.x86_64                           1/1 
+  Running scriptlet: bind-32:9.11.26-6.el8.x86_64                           1/1 
+  Verifying        : bind-32:9.11.26-6.el8.x86_64                           1/1 
+
+Installed:
+  bind-32:9.11.26-6.el8.x86_64                                                  
+
+Complete!
+[root@localhost admins]# vi /etc/named.conf 
+-------------------------------------------------
+listen-on port 53 { any; };
+directory       "/var/named";
+ allow-query     { any; };
+        forwarders {
+        8.8.8.8;  # Example Google DNS
+        8.8.4.4;
+    };
+
+zone "wss.com" IN {
+    type master;
+    file "wss.com.db";
+};
+zone "1.168.192.in-addr.arpa" {
+    type master;
+    file "db.192.168.1";
+};
+--------------------------------------
+[root@localhost admins]# vi /var/named/wss.com.db
+--------------------------------------------------
+$TTL 86400
+@   IN  SOA     ns.wss.com. admin.wss.com. (
+            2023091202 ; Serial
+            3600       ; Refresh
+            1800       ; Retry
+            604800     ; Expire
+            86400      ; Negative Cache TTL
+)
+;
+@   IN  NS      ns.wss.com.
+ns  IN  A       192.168.1.10  ; DNS server IP
+ftp IN  A       192.168.1.10  ; FTP server IP
+example.com.  IN  A  192.168.1.10 ;
+
+
+--------------------------------------------------
+ vi /var/named/db.192.168.1
+--------------------------------------------------
+TTL    86400
+@       IN      SOA     ns.wss.com. admin.wss.com. (
+                       2023091301  ; Serial
+                       7200        ; Refresh
+                       3600        ; Retry
+                       1209600     ; Expire
+                       86400       ; Minimum TTL
+)
+;
+@       IN      NS      ns.wss.com.
+10      IN      PTR     ftp.wss.com.
+----------------------------------------------------
+[root@localhost admins]# systemctl start named
+[root@localhost admins]# systemctl enable named
+Created symlink /etc/systemd/system/multi-user.target.wants/named.service → /usr/lib/systemd/system/named.service.
+[root@localhost admins]# sudo firewall-cmd --permanent --add-service=dns
+success
+[root@localhost admins]# sudo firewall-cmd --reload
+success
+
+=====================================================================
+[root@localhost admins]# dnf install dhcp-server-12:4.3.6-45.el8.x86_64 
+Last metadata expiration check: 0:16:13 ago on Thu 12 Sep 2024 07:36:48 AM EDT.
+Dependencies resolved.
+================================================================================
+ Package              Arch       Version                 Repository        Size
+================================================================================
+Installing:
+ dhcp-server          x86_64     12:4.3.6-45.el8         local-baseos     530 k
+Installing dependencies:
+ bind-export-libs     x86_64     32:9.11.26-6.el8        local-baseos     1.1 M
+ dhcp-common          noarch     12:4.3.6-45.el8         local-baseos     207 k
+ dhcp-libs            x86_64     12:4.3.6-45.el8         local-baseos     148 k
+
+Transaction Summary
+================================================================================
+Install  4 Packages
+
+Total size: 2.0 M
+Installed size: 4.6 M
+Is this ok [y/N]: y
+Downloading Packages:
+Running transaction check
+Transaction check succeeded.
+Running transaction test
+Transaction test succeeded.
+Running transaction
+  Preparing        :                                                        1/1 
+  Installing       : dhcp-libs-12:4.3.6-45.el8.x86_64                       1/4 
+  Installing       : dhcp-common-12:4.3.6-45.el8.noarch                     2/4 
+  Installing       : bind-export-libs-32:9.11.26-6.el8.x86_64               3/4 
+  Running scriptlet: bind-export-libs-32:9.11.26-6.el8.x86_64               3/4 
+  Running scriptlet: dhcp-server-12:4.3.6-45.el8.x86_64                     4/4 
+  Installing       : dhcp-server-12:4.3.6-45.el8.x86_64                     4/4 
+  Running scriptlet: dhcp-server-12:4.3.6-45.el8.x86_64                     4/4 
+  Verifying        : bind-export-libs-32:9.11.26-6.el8.x86_64               1/4 
+  Verifying        : dhcp-common-12:4.3.6-45.el8.noarch                     2/4 
+  Verifying        : dhcp-libs-12:4.3.6-45.el8.x86_64                       3/4 
+  Verifying        : dhcp-server-12:4.3.6-45.el8.x86_64                     4/4 
+
+Installed:
+  bind-export-libs-32:9.11.26-6.el8.x86_64  dhcp-common-12:4.3.6-45.el8.noarch 
+  dhcp-libs-12:4.3.6-45.el8.x86_64          dhcp-server-12:4.3.6-45.el8.x86_64 
+
+Complete!
+[root@localhost admins]# vi /etc/dhcp/dhcpd.conf 
+-----------------------------------------------------
+subnet 192.168.1.0 netmask 255.255.255.0 {
+    range 192.168.1.100 192.168.1.200;  # IP range for clients
+    option routers 192.168.1.1;          # Gateway IP
+    option domain-name "wss.com";    # Domain name
+    option domain-name-servers 192.168.1.10;  # DNS server IP
+}
+-----------------------------------------------------
+[root@localhost admins]# vi /etc/sysconfig/dhcpd
+[root@localhost admins]# systemctl start dhcpd
+[root@localhost admins]# systemctl enable dhcpd
+Created symlink /etc/systemd/system/multi-user.target.wants/dhcpd.service → /usr/lib/systemd/system/dhcpd.service.
+[root@localhost admins]# sudo firewall-cmd --permanent --add-service=dhcp
+success
+[root@localhost admins]# sudo firewall-cmd --reload
+success
+-----------------------------------------------------------------
+  135  dnf install httpd
+  136  sudo systemctl start httpd
+  137  sudo systemctl enable httpd
+  138  sudo firewall-cmd --permanent --add-service=http
+  139  sudo firewall-cmd --permanent --add-service=https
+  140  sudo firewall-cmd --reload
+  141  vi /var/www/html/index.html
+  142  systemctl restart httpd 
+  162  mkdir -p /var/www/html/example.com/public_html
+  163  vi /var/www/html/example.com/public_html/index.html
+  166  vi /etc/httpd/conf.d/example.com.conf
+-------------------------------------------------------------------
+<VirtualHost example.com:80>
+ServerName example.com
+ServerAlias www.example.com
+ServerAdmin admins@example.com
+DocumentRoot /var/www/html/example.com/public_html
+<Directory /var/www/html/example.com/public_html>
+AllowOverride All
+Options -Indexes +FollowSymLinks
+</Directory>
+ErrorLog /var/log/httpd/example.com-error.log
+CustomLog /var/log/httpd/example.com-access.log combined
+</VirtualHost>
+-------------------------------------------------------------------
+  167  chown -R apache /var/www/example.com/
+  168  systemctl restart httpd
+
+
+
+
+
+
